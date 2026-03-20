@@ -1,0 +1,105 @@
+{% extends "base.html" %}
+{% block title %}Greining í gangi - VV Tilboðsgreining{% endblock %}
+
+{% block content %}
+<div class="max-w-xl mx-auto text-center px-6 py-20">
+    <div class="mb-8">
+        <div class="w-14 h-14 mx-auto mb-5 rounded-full bg-vv-navy/10 flex items-center justify-center">
+            <svg class="w-7 h-7 text-vv-navy animate-spin" fill="none" viewBox="0 0 24 24">
+                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="3"></circle>
+                <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+            </svg>
+        </div>
+        <h1 class="text-xl font-bold text-gray-800 mb-1">Greining í gangi</h1>
+        <p class="text-gray-400 text-sm" id="progress-label">Byrja...</p>
+    </div>
+
+    <!-- Timer -->
+    <div class="mb-8">
+        <span class="text-5xl font-mono font-bold text-vv-navy" id="timer">0:00</span>
+    </div>
+
+    <!-- Progress bar -->
+    <div class="w-full bg-gray-100 rounded-full h-2 mb-2">
+        <div id="progress-bar" class="bg-vv-navy h-2 rounded-full transition-all duration-700" style="width: 0%"></div>
+    </div>
+    <p class="text-xs text-gray-400 mb-12" id="progress-percent">0%</p>
+
+    <!-- Steps -->
+    <div class="text-left max-w-xs mx-auto space-y-4">
+        <div class="flex items-center gap-3" id="step-1">
+            <div class="w-6 h-6 rounded-full bg-gray-100 flex items-center justify-center text-[10px] font-medium text-gray-400">1</div>
+            <span class="text-sm text-gray-400">Lesa skjöl</span>
+        </div>
+        <div class="flex items-center gap-3" id="step-2">
+            <div class="w-6 h-6 rounded-full bg-gray-100 flex items-center justify-center text-[10px] font-medium text-gray-400">2</div>
+            <span class="text-sm text-gray-400">Tengja kafla</span>
+        </div>
+        <div class="flex items-center gap-3" id="step-3">
+            <div class="w-6 h-6 rounded-full bg-gray-100 flex items-center justify-center text-[10px] font-medium text-gray-400">3</div>
+            <span class="text-sm text-gray-400">Finna BC vörur</span>
+        </div>
+        <div class="flex items-center gap-3" id="step-4">
+            <div class="w-6 h-6 rounded-full bg-gray-100 flex items-center justify-center text-[10px] font-medium text-gray-400">4</div>
+            <span class="text-sm text-gray-400">Greina vankantar</span>
+        </div>
+        <div class="flex items-center gap-3" id="step-5">
+            <div class="w-6 h-6 rounded-full bg-gray-100 flex items-center justify-center text-[10px] font-medium text-gray-400">5</div>
+            <span class="text-sm text-gray-400">Búa til Excel</span>
+        </div>
+    </div>
+</div>
+
+<script>
+const ANALYSIS_ID = "{{ analysis_id }}";
+let startTime = Date.now();
+
+function updateTimer() {
+    const elapsed = Math.floor((Date.now() - startTime) / 1000);
+    const min = Math.floor(elapsed / 60);
+    const sec = elapsed % 60;
+    document.getElementById('timer').textContent = min + ':' + String(sec).padStart(2, '0');
+    requestAnimationFrame(() => setTimeout(updateTimer, 250));
+}
+updateTimer();
+
+async function pollProgress() {
+    const resp = await fetch(`/progress/${ANALYSIS_ID}`);
+    const data = await resp.json();
+
+    const progress = data.progress || {};
+    const percent = progress.percent || 0;
+    const label = progress.label || 'Vinn...';
+    const step = progress.step || 0;
+
+    document.getElementById('progress-bar').style.width = percent + '%';
+    document.getElementById('progress-percent').textContent = percent + '%';
+    document.getElementById('progress-label').textContent = label;
+
+    for (let i = 1; i <= 5; i++) {
+        const el = document.getElementById('step-' + i);
+        const dot = el.querySelector('div');
+        const text = el.querySelector('span');
+        if (i < step) {
+            dot.className = 'w-6 h-6 rounded-full bg-green-500 flex items-center justify-center text-[10px] text-white';
+            dot.innerHTML = '<svg class="w-3.5 h-3.5" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/></svg>';
+            text.className = 'text-sm text-green-600';
+        } else if (i === step) {
+            dot.className = 'w-6 h-6 rounded-full bg-vv-navy flex items-center justify-center text-[10px] font-medium text-white';
+            text.className = 'text-sm text-vv-navy font-medium';
+        }
+    }
+
+    if (data.status === 'done') {
+        window.location.href = `/results/${ANALYSIS_ID}`;
+    } else if (data.status === 'error') {
+        document.getElementById('progress-label').textContent = 'Villa: ' + label;
+        document.getElementById('progress-bar').classList.replace('bg-vv-navy', 'bg-vv-accent');
+    } else {
+        setTimeout(pollProgress, 1500);
+    }
+}
+
+pollProgress();
+</script>
+{% endblock %}

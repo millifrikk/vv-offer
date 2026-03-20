@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html lang="is">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}VV Tilboðsgreining{% endblock %}</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/htmx.org@2.0.4"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        vv: {
+                            navy: '#1a2744',
+                            dark: '#0f1a2e',
+                            blue: '#2563eb',
+                            accent: '#dc2626',
+                            light: '#f0f4f8',
+                        }
+                    },
+                    fontFamily: {
+                        sans: ['Inter', 'system-ui', '-apple-system', 'sans-serif'],
+                    }
+                }
+            }
+        }
+    </script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <style>
+        .drop-zone { transition: all 0.2s; }
+        .drop-zone.drag-over { border-color: #2563eb; background: #eff6ff; }
+    </style>
+    {% block head %}{% endblock %}
+</head>
+<body class="bg-gray-50 min-h-screen font-sans">
+    <nav class="bg-vv-navy border-b border-white/10 px-6 py-3">
+        <div class="max-w-6xl mx-auto flex items-center justify-between">
+            <div class="flex items-center gap-4">
+                <a href="/analyses" class="flex items-center gap-2">
+                    <div class="w-7 h-7 bg-white rounded flex items-center justify-center">
+                        <span class="text-vv-navy font-extrabold text-xs">V</span>
+                    </div>
+                    <span class="text-white font-semibold tracking-wide text-sm uppercase">Vatnsvirkinn</span>
+                    <span class="text-white/30 text-sm">|</span>
+                    <span class="text-white/70 text-sm">Tilboðsgreining</span>
+                </a>
+                {% if user is defined and user %}
+                <div class="flex items-center gap-3 ml-6">
+                    <a href="/analyses" class="text-white/50 hover:text-white text-xs transition-colors">Greiningar</a>
+                    <a href="/new" class="text-white/50 hover:text-white text-xs transition-colors">Ný greining</a>
+                    {% if user.is_admin %}
+                    <a href="/admin/users" class="text-white/50 hover:text-white text-xs transition-colors">Notendur</a>
+                    {% endif %}
+                </div>
+                {% endif %}
+            </div>
+            {% if user is defined and user %}
+            <div class="flex items-center gap-3">
+                <span class="text-white/40 text-xs">{{ user.name }}</span>
+                <a href="/logout" class="text-white/30 hover:text-white/60 text-xs transition-colors">Útskrá</a>
+            </div>
+            {% endif %}
+        </div>
+    </nav>
+
+    <main>
+        {% block content %}{% endblock %}
+    </main>
+</body>
+</html>
