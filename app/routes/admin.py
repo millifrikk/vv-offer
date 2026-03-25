@@ -1,21 +1,24 @@
-"""Admin routes - user management and cache control."""
+"""Admin routes - user management, cache control, and catalog import."""
 
+import shutil
 import sqlite3
 
-from fastapi import APIRouter, Request, Form
+from fastapi import APIRouter, File, Request, Form, UploadFile
 from fastapi.responses import HTMLResponse, RedirectResponse
 from fastapi.templating import Jinja2Templates
 
 from app.auth import require_admin, hash_password
 from app.config import settings
-from app.db.models import get_all_users, create_user, delete_user
+from app.db.models import (
+    get_all_users, create_user, delete_user,
+    import_catalog_csv, get_catalog_stats, get_catalog_categories,
+)
 
 router = APIRouter(prefix="/admin")
 templates = Jinja2Templates(directory="app/templates")
 
 
 def _ensure_cache_table(conn):
-    """Create ai_cache table if it doesn't exist."""
     conn.execute("""
         CREATE TABLE IF NOT EXISTS ai_cache (
             cache_key TEXT PRIMARY KEY,
@@ -27,7 +30,6 @@ def _ensure_cache_table(conn):
 
 
 def get_cache_stats() -> dict:
-    """Get AI cache statistics."""
     db_path = settings.db_path
     try:
         conn = sqlite3.connect(db_path)
@@ -43,7 +45,6 @@ def get_cache_stats() -> dict:
 
 
 def flush_ai_cache():
-    """Delete all AI cached responses."""
     db_path = settings.db_path
     conn = sqlite3.connect(db_path)
     _ensure_cache_table(conn)
@@ -60,12 +61,16 @@ async def users_page(request: Request):
 
     users = get_all_users()
     cache_stats = get_cache_stats()
+    catalog_stats = get_catalog_stats()
+    catalog_categories = get_catalog_categories() if catalog_stats["count"] > 0 else []
 
     return templates.TemplateResponse("admin_users.html", {
         "request": request,
         "user": user,
         "users": users,
         "cache_stats": cache_stats,
+        "catalog_stats": catalog_stats,
+        "catalog_categories": catalog_categories,
     })
 
 
@@ -110,4 +115,25 @@ async def flush_cache(request: Request):
         return RedirectResponse("/login", status_code=302)
 
     flush_ai_cache()
+    return RedirectResponse("/admin/users", status_code=302)
+
+
+@router.post("/catalog/import")
+async def import_catalog(request: Request, file: UploadFile = File(...)):
+    """Import product catalog from CSV upload."""
+    admin = require_admin(request)
+    if not admin:
+        return RedirectResponse("/login", status_code=302)
+
+    # Save uploaded CSV temporarily
+    tmp_path = settings.upload_dir / "catalog_import.csv"
+    settings.upload_dir.mkdir(parents=True, exist_ok=True)
+    with open(tmp_path, "wb") as f:
+        shutil.copyfileobj(file.file, f)
+
+    # Import into database
+    count = import_catalog_csv(str(tmp_path))
+    tmp_path.unlink(missing_ok=True)
+
+    print(f"Imported {count} products into catalog")
     return RedirectResponse("/admin/users", status_code=302)

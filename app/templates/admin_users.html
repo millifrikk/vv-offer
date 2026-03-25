@@ -42,6 +42,63 @@
         </table>
     </div>
 
+    <!-- Product Catalog -->
+    <div class="bg-white rounded-xl border border-gray-200 p-6 mb-8">
+        <div class="flex items-center justify-between mb-4">
+            <div>
+                <h3 class="font-semibold text-gray-800 text-sm">Vörulisti</h3>
+                <p class="text-xs text-gray-400 mt-0.5">Innfluttur vörulisti Vatnsvirkjans - notaður til vörusamsvörunar í greiningum</p>
+            </div>
+        </div>
+
+        {% if catalog_stats.count > 0 %}
+        <div class="flex items-center gap-6 mb-4">
+            <div>
+                <p class="text-2xl font-bold text-vv-navy">{{ '{:,}'.format(catalog_stats.count) }}</p>
+                <p class="text-xs text-gray-400">vörur</p>
+            </div>
+            <div>
+                <p class="text-2xl font-bold text-vv-navy">{{ catalog_stats.categories }}</p>
+                <p class="text-xs text-gray-400">flokkar</p>
+            </div>
+            <div>
+                <p class="text-2xl font-bold text-green-600">{{ '{:,}'.format(catalog_stats.with_price) }}</p>
+                <p class="text-xs text-gray-400">með verð</p>
+            </div>
+            {% if catalog_stats.imported_at %}
+            <div>
+                <p class="text-sm text-gray-600">{{ catalog_stats.imported_at[:16] }}</p>
+                <p class="text-xs text-gray-400">innflutt</p>
+            </div>
+            {% endif %}
+        </div>
+
+        {% if catalog_categories %}
+        <div class="mb-4">
+            <p class="text-xs text-gray-500 mb-2">Flokkar:</p>
+            <div class="flex flex-wrap gap-1">
+                {% for cat in catalog_categories %}
+                <span class="text-[10px] bg-gray-100 text-gray-600 px-2 py-0.5 rounded">{{ cat.category }} ({{ cat.count }})</span>
+                {% endfor %}
+            </div>
+        </div>
+        {% endif %}
+        {% else %}
+        <p class="text-sm text-gray-400 mb-4">Enginn vörulisti hefur verið fluttur inn.</p>
+        {% endif %}
+
+        <div class="border-t border-gray-100 pt-4 mt-2">
+            <form method="POST" action="/admin/catalog/import" enctype="multipart/form-data" class="flex items-center gap-3">
+                <input type="file" name="file" accept=".csv" required
+                       class="text-sm text-gray-500 file:mr-3 file:py-1.5 file:px-3 file:rounded-lg file:border file:border-gray-200 file:text-sm file:font-medium file:bg-gray-50 file:text-gray-700 hover:file:bg-gray-100">
+                <button type="submit" class="px-4 py-1.5 bg-vv-navy text-white rounded-lg text-sm font-medium hover:bg-vv-dark">
+                    {% if catalog_stats.count > 0 %}Uppfæra vörulista{% else %}Flytja inn vörulista{% endif %}
+                </button>
+            </form>
+            <p class="text-[10px] text-gray-400 mt-2">CSV skrá með | aðgreiningu: nr|lysing|grunn_maelieining|ein_verd|kodi_yfirflokks_voru</p>
+        </div>
+    </div>
+
     <!-- AI Cache management -->
     <div class="bg-white rounded-xl border border-gray-200 p-6 mb-8">
         <div class="flex items-center justify-between mb-4">

@@ -51,6 +51,19 @@ def init_tables():
             error_message TEXT
         );
 
+        CREATE TABLE IF NOT EXISTS product_catalog (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            sku TEXT NOT NULL,
+            description TEXT NOT NULL,
+            unit TEXT DEFAULT 'STK',
+            unit_price REAL,
+            category TEXT,
+            imported_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        );
+
+        CREATE INDEX IF NOT EXISTS idx_product_catalog_sku ON product_catalog(sku);
+        CREATE INDEX IF NOT EXISTS idx_product_catalog_category ON product_catalog(category);
+
         CREATE TABLE IF NOT EXISTS analysis_files (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             analysis_id INTEGER NOT NULL REFERENCES analyses(id) ON DELETE CASCADE,
@@ -237,3 +250,94 @@ def get_analysis_file(analysis_id: int, file_type: str) -> dict | None:
     ).fetchone()
     conn.close()
     return dict(row) if row else None
+
+
+# --- Product catalog helpers ---
+
+def import_catalog_csv(csv_path: str) -> int:
+    """Import product catalog from CSV. Replaces all existing catalog data."""
+    import csv
+
+    conn = get_db()
+    conn.execute("DELETE FROM product_catalog")
+
+    count = 0
+    with open(csv_path, encoding="utf-8-sig") as f:
+        reader = csv.DictReader(f, delimiter="|")
+        batch = []
+        for row in reader:
+            price = None
+            try:
+                price = float(row.get("ein_verd", "").replace(",", "."))
+            except (ValueError, TypeError):
+                pass
+
+            batch.append((
+                row.get("nr", "").strip(),
+                row.get("lysing", "").strip().strip('"'),
+                row.get("grunn_maelieining", "STK").strip(),
+                price,
+                row.get("kodi_yfirflokks_voru", "").strip(),
+            ))
+            count += 1
+
+            if len(batch) >= 500:
+                conn.executemany(
+                    "INSERT INTO product_catalog (sku, description, unit, unit_price, category) VALUES (?, ?, ?, ?, ?)",
+                    batch,
+                )
+                batch = []
+
+        if batch:
+            conn.executemany(
+                "INSERT INTO product_catalog (sku, description, unit, unit_price, category) VALUES (?, ?, ?, ?, ?)",
+                batch,
+            )
+
+    conn.commit()
+    conn.close()
+    return count
+
+
+def get_catalog_stats() -> dict:
+    """Get product catalog statistics."""
+    conn = get_db()
+    try:
+        count = conn.execute("SELECT COUNT(*) FROM product_catalog").fetchone()[0]
+        categories = conn.execute("SELECT COUNT(DISTINCT category) FROM product_catalog").fetchone()[0]
+        with_price = conn.execute("SELECT COUNT(*) FROM product_catalog WHERE unit_price IS NOT NULL AND unit_price > 0").fetchone()[0]
+        imported = conn.execute("SELECT MAX(imported_at) FROM product_catalog").fetchone()[0]
+    except Exception:
+        conn.close()
+        return {"count": 0, "categories": 0, "with_price": 0, "imported_at": None}
+    conn.close()
+    return {"count": count, "categories": categories, "with_price": with_price, "imported_at": imported}
+
+
+def get_catalog_products() -> list[dict]:
+    """Get all products from the catalog."""
+    conn = get_db()
+    rows = conn.execute("SELECT * FROM product_catalog ORDER BY category, sku").fetchall()
+    conn.close()
+    return [dict(r) for r in rows]
+
+
+def search_catalog(query: str, limit: int = 50) -> list[dict]:
+    """Search catalog by SKU or description."""
+    conn = get_db()
+    rows = conn.execute(
+        "SELECT * FROM product_catalog WHERE sku LIKE ? OR description LIKE ? LIMIT ?",
+        (f"%{query}%", f"%{query}%", limit),
+    ).fetchall()
+    conn.close()
+    return [dict(r) for r in rows]
+
+
+def get_catalog_categories() -> list[dict]:
+    """Get all categories with product counts."""
+    conn = get_db()
+    rows = conn.execute(
+        "SELECT category, COUNT(*) as count FROM product_catalog GROUP BY category ORDER BY category"
+    ).fetchall()
+    conn.close()
+    return [dict(r) for r in rows]
