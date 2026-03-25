@@ -27,24 +27,28 @@ progress_store: dict[int, dict] = {}
 
 def run_pipeline(analysis_id: int):
     """Run the full processing pipeline in a background thread."""
-    from app.parsers import MagnaskraParser, VerklysingParser, BCCatalogParser
+    from app.parsers import MagnaskraParser, VerklysingParser
     from app.engine.section_matcher import SectionMatcher
     from app.engine.bc_matcher import BCMatcher
     from app.engine.gap_analyzer import GapAnalyzer
     from app.engine.ai_client import AIClient
     from app.output.excel_writer import ExcelWriter
+    from app.db.models import get_catalog_as_bc_products, get_catalog_stats
 
     files_list = get_analysis_files(analysis_id)
     files = {f["file_type"]: f for f in files_list}
     t_start = time.time()
 
     try:
-        # Step 1: Parse
+        # Step 1: Parse documents + load catalog from DB
         progress_store[analysis_id] = {"step": 1, "label": "Parsing documents...", "percent": 10}
 
         mag_items = MagnaskraParser().parse(files["magnaskra"]["file_path"])
         verk_sections = VerklysingParser().parse(files["verklysing"]["file_path"])
-        bc_products = BCCatalogParser().parse(files["bc_catalog"]["file_path"]) if "bc_catalog" in files else []
+
+        # Load product catalog from database (imported via admin)
+        catalog_stats = get_catalog_stats()
+        bc_products = get_catalog_as_bc_products() if catalog_stats["count"] > 0 else []
 
         # Step 2: Section matching
         progress_store[analysis_id] = {"step": 2, "label": "Matching sections...", "percent": 25}
@@ -58,8 +62,8 @@ def run_pipeline(analysis_id: int):
             if e.match_status.value == "matched" and not e.magnaskra_item.is_header
         )
 
-        # Step 3: BC matching
-        progress_store[analysis_id] = {"step": 3, "label": "Matching BC products...", "percent": 40}
+        # Step 3: BC matching (uses centralized catalog from DB)
+        progress_store[analysis_id] = {"step": 3, "label": f"Matching against {catalog_stats['count']} catalog products...", "percent": 40}
 
         ai_client = None
         if bc_products:

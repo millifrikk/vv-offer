@@ -57,7 +57,7 @@
                class="w-full max-w-md px-4 py-2.5 border border-gray-300 rounded-lg text-gray-800 focus:ring-2 focus:ring-vv-navy/20 focus:border-vv-navy outline-none transition-all">
     </div>
 
-    <div class="grid grid-cols-1 md:grid-cols-3 gap-5" id="upload-area">
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-5" id="upload-area">
         <!-- Magnskrá -->
         <div class="bg-white rounded-xl border border-gray-200 overflow-hidden">
             <div class="px-5 pt-5 pb-3">
@@ -108,30 +108,30 @@
             </div>
         </div>
 
-        <!-- BC Catalog -->
-        <div class="bg-white rounded-xl border border-gray-200 overflow-hidden">
-            <div class="px-5 pt-5 pb-3">
-                <div class="flex items-start justify-between mb-1">
-                    <h3 class="font-semibold text-gray-800 text-sm">BC Vörulisti</h3>
-                    <span class="text-[10px] font-medium text-gray-400 bg-gray-50 px-1.5 py-0.5 rounded">Valfrjálst</span>
-                </div>
-                <p class="text-xs text-gray-400">Vörulisti úr Business Central (.xlsx)</p>
-            </div>
-            <div class="px-5 pb-5">
-                <div class="drop-zone border-2 border-dashed border-gray-200 rounded-lg p-5 text-center cursor-pointer hover:border-vv-blue/40 transition-all"
-                     id="drop-bc_catalog"
-                     onclick="document.getElementById('file-bc_catalog').click()">
-                    <div id="status-bc_catalog">
-                        <svg class="w-8 h-8 mx-auto text-gray-300 mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"/>
-                        </svg>
-                        <p class="text-gray-400 text-xs">Dragðu .xlsx skjal hingað</p>
-                    </div>
-                    <input type="file" id="file-bc_catalog" accept=".xlsx,.xls" class="hidden"
-                           onchange="uploadFile(this, 'bc_catalog')">
-                </div>
-            </div>
+    </div>
+
+    <!-- Catalog status -->
+    <div class="mt-4">
+        {% if catalog_stats and catalog_stats.count > 0 %}
+        <div class="flex items-center gap-2 text-sm text-gray-500 bg-white rounded-lg border border-gray-200 px-4 py-3">
+            <svg class="w-4 h-4 text-green-500 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
+                <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/>
+            </svg>
+            <span>Vörulisti: <strong class="text-gray-700">{{ '{:,}'.format(catalog_stats.count) }}</strong> vörur í {{ catalog_stats.categories }} flokkum</span>
+            <span class="text-gray-300 mx-1">|</span>
+            <span class="text-gray-400 text-xs">Vörusamsvörun keyrir sjálfkrafa við greiningu</span>
         </div>
+        {% else %}
+        <div class="flex items-center gap-2 text-sm text-amber-600 bg-amber-50 rounded-lg border border-amber-200 px-4 py-3">
+            <svg class="w-4 h-4 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
+                <path fill-rule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clip-rule="evenodd"/>
+            </svg>
+            <span>Enginn vörulisti hefur verið fluttur inn. Greining keyrir án vörusamsvörunar.</span>
+            {% if user.is_admin %}
+            <a href="/admin/users" class="text-amber-700 underline text-xs ml-1">Flytja inn</a>
+            {% endif %}
+        </div>
+        {% endif %}
     </div>
 
     <!-- Action -->

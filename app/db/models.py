@@ -341,3 +341,27 @@ def get_catalog_categories() -> list[dict]:
     ).fetchall()
     conn.close()
     return [dict(r) for r in rows]
+
+
+def get_catalog_as_bc_products():
+    """Load catalog from DB and return as BCProduct objects for the matching engine."""
+    from app.models.schemas import BCProduct, BCProductType
+
+    conn = get_db()
+    rows = conn.execute(
+        "SELECT sku, description, unit, unit_price, category FROM product_catalog"
+    ).fetchall()
+    conn.close()
+
+    products = []
+    for row in rows:
+        products.append(BCProduct(
+            sku=row["sku"],
+            description=row["description"],
+            quantity=0,
+            unit=row["unit"] or "STK",
+            product_type=BCProductType.VARA,
+            section_comment=row["category"],
+            unit_price=row["unit_price"],
+        ))
+    return products

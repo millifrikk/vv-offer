@@ -17,6 +17,7 @@ from app.db.models import (
     add_analysis_file,
     get_analysis_file,
     update_analysis,
+    get_catalog_stats,
     get_db,
 )
 
@@ -52,6 +53,7 @@ async def new_analysis(request: Request):
         "analysis_id": temp_id,
         "is_new": True,
         "uploaded_types": set(),
+        "catalog_stats": get_catalog_stats(),
     })
 
 
@@ -70,6 +72,7 @@ async def upload_page(request: Request, analysis_id: str):
             "analysis_id": analysis_id,
             "is_new": True,
             "uploaded_types": uploaded_types,
+            "catalog_stats": get_catalog_stats(),
         })
 
     # Otherwise it's an existing DB analysis
@@ -91,6 +94,7 @@ async def upload_page(request: Request, analysis_id: str):
         "analysis_id": analysis_id,
         "is_new": False,
         "uploaded_types": uploaded_types,
+        "catalog_stats": get_catalog_stats(),
     })
 
 
@@ -260,15 +264,7 @@ async def review(request: Request, analysis_id: str):
                         for s in sections],
         }
 
-    if "bc_catalog" in files:
-        parser = BCCatalogParser()
-        products = parser.parse(files["bc_catalog"]["file_path"])
-        vara_count = sum(1 for p in products if p.product_type.value == "Vara")
-        parse_results["bc_catalog"] = {
-            "total": len(products),
-            "vara": vara_count,
-            "sample": [p.model_dump() for p in products[:15]],
-        }
+    catalog_stats = get_catalog_stats()
 
     return templates.TemplateResponse("review.html", {
         "request": request,
@@ -277,4 +273,5 @@ async def review(request: Request, analysis_id: str):
         "analysis": analysis,
         "files": files,
         "parse_results": parse_results,
+        "catalog_stats": catalog_stats,
     })

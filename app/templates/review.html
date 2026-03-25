@@ -29,11 +29,11 @@
         </div>
         {% endif %}
 
-        {% if parse_results.get('bc_catalog') %}
+        {% if catalog_stats and catalog_stats.count > 0 %}
         <div class="bg-white rounded-xl border border-gray-200 p-5">
-            <p class="text-xs font-medium text-gray-400 uppercase tracking-wide mb-2">BC Vörulisti</p>
-            <p class="text-3xl font-bold text-vv-navy">{{ parse_results.bc_catalog.vara }}</p>
-            <p class="text-sm text-gray-400 mt-1">vörur ({{ parse_results.bc_catalog.total }} raðir samtals)</p>
+            <p class="text-xs font-medium text-gray-400 uppercase tracking-wide mb-2">Vörulisti</p>
+            <p class="text-3xl font-bold text-vv-navy">{{ '{:,}'.format(catalog_stats.count) }}</p>
+            <p class="text-sm text-gray-400 mt-1">vörur í {{ catalog_stats.categories }} flokkum</p>
         </div>
         {% endif %}
     </div>
